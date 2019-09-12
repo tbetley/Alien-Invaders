@@ -5,7 +5,11 @@
 **********/
 
 #include <cstdio>
+#include <iostream>
+#include <string>
+#include <Windows.h>
 #include <cstdint>
+#include <stdlib.h>
 #include <glew.h>
 #include <glfw3.h>
 #define GAME_MAX_ROCKETS 128
@@ -168,6 +172,30 @@ void DrawSprite(Buffer* buffer, const Sprite& sprite, unsigned int x, unsigned i
 	}
 }
 
+// function to draw text on the screen
+void DrawBufferText(Buffer* buffer, const Sprite& text_spritesheet, const char* text, unsigned int x, unsigned int y, uint32_t color)
+{
+	// stride is the size of the character sprite
+	unsigned int stride = text_spritesheet.height * text_spritesheet.width;
+	unsigned int xp = x;
+	Sprite sprite = text_spritesheet;
+
+	// iterate until you reach the null terminator
+	for (const char* char_pos = text; *char_pos != '\0'; char_pos++)
+	{
+		char character = *char_pos - 32; // assists in indexing the sprite sheet
+		if (character < 0 || character >= 65)
+			continue;
+
+		// index on the correct location of the sprite sheet and enter data into the sprite
+		sprite.data = text_spritesheet.data + character * stride;
+
+		// draw to buffer
+		DrawSprite(buffer, sprite, xp, y, color);
+		xp += sprite.width + 1;
+	}
+}
+
 // type
 enum AlienType : uint8_t
 {
@@ -205,7 +233,9 @@ struct Game
 	unsigned int height, width;
 	unsigned int alien_hoard_size;
 	unsigned int num_rockets;
+	unsigned int frame_counter;
 	Alien* alien_array; // this will be a dynamically allocated array to store alien location and type data
+	Alien* first_line_array; // array holding the front facing aliens
 	Player player;
 	Rocket rockets[GAME_MAX_ROCKETS];
 };
@@ -239,7 +269,7 @@ int main()
 
 	// initialize pointer to window object
 	GLFWwindow* window;
-	window = glfwCreateWindow(640, 480, "Space Invaders", NULL, NULL);
+	window = glfwCreateWindow(640, 640, "Alien Invaders", NULL, NULL);
 
 	// handle window creation error
 	if (!window)
@@ -287,7 +317,7 @@ int main()
 	**********/
 	// initialize buffer size
 	const unsigned int buffer_width = 300; // 224
-	const unsigned int buffer_height = 300; // 256
+	const unsigned int buffer_height = 400; // 256
 
 	// create clear color set to green
 	uint32_t backgroundColor = rgb_to_uint32(132, 145, 136);
@@ -514,6 +544,83 @@ int main()
 		1,1,1,1,1,1,1,1,1,1
 	};
 
+	// create text spritesheet
+	Sprite text_spritesheet;
+	text_spritesheet.width = 5;
+	text_spritesheet.height = 7;
+	text_spritesheet.data = new uint8_t[65 * 35]
+	{	// others
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,
+		0,1,0,1,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,1,0,1,0,0,1,0,1,0,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,0,1,0,1,0,0,1,0,1,0,
+		0,0,1,0,0,0,1,1,1,0,1,0,1,0,0,0,1,1,1,0,0,0,1,0,1,0,1,1,1,0,0,0,1,0,0,
+		1,1,0,1,0,1,1,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,1,0,1,0,1,1,
+		0,1,1,0,0,1,0,0,1,0,1,0,0,1,0,0,1,1,0,0,1,0,0,1,0,1,0,0,0,1,0,1,1,1,1,
+		0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,
+		1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,
+		0,0,1,0,0,1,0,1,0,1,0,1,1,1,0,0,0,1,0,0,0,1,1,1,0,1,0,1,0,1,0,0,1,0,0,
+		0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,1,1,1,1,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+		0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,
+		// numbers
+		0,1,1,1,0,1,0,0,0,1,1,0,0,1,1,1,0,1,0,1,1,1,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		0,0,1,0,0,0,1,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,1,1,0,
+		0,1,1,1,0,1,0,0,0,1,0,0,0,0,1,0,0,1,1,0,0,1,0,0,0,1,0,0,0,0,1,1,1,1,1,
+		1,1,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,1,1,0,0,0,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		0,0,0,1,0,0,0,1,1,0,0,1,0,1,0,1,0,0,1,0,1,1,1,1,1,0,0,0,1,0,0,0,0,1,0,
+		1,1,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,0,1,0,0,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		0,1,1,1,0,1,0,0,0,1,1,0,0,0,0,1,1,1,1,0,1,0,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		1,1,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,
+		0,1,1,1,0,1,0,0,0,1,1,0,0,0,1,0,1,1,1,0,1,0,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		0,1,1,1,0,1,0,0,0,1,1,0,0,0,1,0,1,1,1,1,0,0,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		//others
+		0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,
+		0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,
+		0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,
+		1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,
+		0,1,1,1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,
+		0,1,1,1,0,1,0,0,0,1,1,0,1,0,1,1,1,0,1,1,1,0,1,0,0,1,0,0,0,1,0,1,1,1,0,
+		// letters
+		0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,1,0,0,0,1,1,1,1,1,1,1,0,0,0,1,1,0,0,0,1,
+		1,1,1,1,0,1,0,0,0,1,1,0,0,0,1,1,1,1,1,0,1,0,0,0,1,1,0,0,0,1,1,1,1,1,0,
+		0,1,1,1,0,1,0,0,0,1,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,1,1,0,
+		1,1,1,1,0,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,1,1,1,0,
+		1,1,1,1,1,1,0,0,0,0,1,0,0,0,0,1,1,1,1,0,1,0,0,0,0,1,0,0,0,0,1,1,1,1,1,
+		1,1,1,1,1,1,0,0,0,0,1,0,0,0,0,1,1,1,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,
+		0,1,1,1,0,1,0,0,0,1,1,0,0,0,0,1,0,1,1,1,1,0,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,1,1,1,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,
+		0,1,1,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,1,1,0,
+		0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		1,0,0,0,1,1,0,0,1,0,1,0,1,0,0,1,1,0,0,0,1,0,1,0,0,1,0,0,1,0,1,0,0,0,1,
+		1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,1,1,1,1,
+		1,0,0,0,1,1,1,0,1,1,1,0,1,0,1,1,0,1,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,
+		1,0,0,0,1,1,0,0,0,1,1,1,0,0,1,1,0,1,0,1,1,0,0,1,1,1,0,0,0,1,1,0,0,0,1,
+		0,1,1,1,0,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		1,1,1,1,0,1,0,0,0,1,1,0,0,0,1,1,1,1,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,
+		0,1,1,1,0,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,1,0,1,1,0,0,1,1,0,1,1,1,1,
+		1,1,1,1,0,1,0,0,0,1,1,0,0,0,1,1,1,1,1,0,1,0,1,0,0,1,0,0,1,0,1,0,0,0,1,
+		0,1,1,1,0,1,0,0,0,1,1,0,0,0,0,0,1,1,1,0,1,0,0,0,1,0,0,0,0,1,0,1,1,1,0,
+		1,1,1,1,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,
+		1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,0,1,1,1,0,
+		1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,
+		1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,1,0,1,1,0,1,0,1,1,1,0,1,1,1,0,0,0,1,
+		1,0,0,0,1,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,1,0,0,0,1,
+		1,0,0,0,1,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,
+		1,1,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1,1,1,1,1,
+		// others
+		0,0,0,1,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,1,
+		0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,
+		1,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,1,0,0,0,
+		0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,
+		0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	};
+
 	// create rocket sprite
 	Sprite rocket_sprite;
 	rocket_sprite.height = 5;
@@ -538,6 +645,8 @@ int main()
 	game.player.lives = 3;
 	game.player.x = 150;
 	game.player.y = 25;
+	// set number of rockets
+	game.num_rockets = 0;
 
 
 	// create an array to keep track of alien deaths, each frame the death will be decremented by one
@@ -578,14 +687,18 @@ int main()
 			}
 			
 			game.alien_array[j * 10 + i].x = 30 + i * (11 + 15);
-			game.alien_array[j * 10 + i].y = 150 + j * (8 + 15);
+			game.alien_array[j * 10 + i].y = 250 + j * (8 + 15);
 		}
 	}
 
-	// set number of rockets
-	game.num_rockets = 0;
+	// initialize first line array
+	game.first_line_array = new Alien[10];
+	game.frame_counter = 0;
 
+	// initialize score and start game
+	unsigned int score = 0;
 	game_running = true;
+	int aliens_killed = 0;
 
 	/******************** 
 	GAME LOOP
@@ -600,13 +713,24 @@ int main()
 		/*********
 		** DRAW SPRITES
 		**********/
+		// draw score counter
+		DrawBufferText(&buffer, text_spritesheet, "SCORE", 5, 375, rgb_to_uint32(0, 128, 0));
+
+		// convert score int to string and draw score
+		std::string score_string = std::to_string(score);
+		char const *score_array = score_string.c_str();
+		DrawBufferText(&buffer, text_spritesheet, score_array, 50, 375, rgb_to_uint32(0, 128, 0));
+
+		// draw title on screen 
+		DrawBufferText(&buffer, text_spritesheet, "ALIEN INVADERS", 110, 380, rgb_to_uint32(0, 128, 0));
+
 		// draw alien sprite array to specified buffer
 		for (unsigned int i = 0; i < game.alien_hoard_size; i++)
 		{
 			// if alien is dead move on to next one
 			if (!death_counter[i])
 				continue;
-			/// if alien is dead type, draw death animation ** might need to fix enums
+			// if alien is dead type, draw death animation
 			if (game.alien_array[i].type == ALIEN_DEAD)
 			{
 				DrawSprite(&buffer, alien_death_sprite, game.alien_array[i].x, game.alien_array[i].y, rgb_to_uint32(128, 0, 0));
@@ -632,10 +756,10 @@ int main()
 		}
 		
 
-		// update animations
+		// update animation timing
 		for (unsigned int i = 0; i < 2; i++)
 		{
-			++alien_animation[i].time;
+			alien_animation[i].time++;
 			if (alien_animation[i].time == alien_animation[i].num_frames * alien_animation[i].frame_duration)
 			{
 				alien_animation[i].time = 0;  // reset time
@@ -664,9 +788,10 @@ int main()
 		// handle alien deaths
 		for (unsigned int i = 0; i < game.alien_hoard_size; i++)
 		{
+			// death counter slows down the death, making sure each death animation lasts for 10 frames
 			if (game.alien_array[i].type == ALIEN_DEAD && death_counter[i])
 			{
-				--death_counter[i];
+				death_counter[i]--;
 			}
 		}
 
@@ -697,15 +822,93 @@ int main()
 
 				if (overlap)
 				{
+					// update score
+					score += 10 * (4 - game.alien_array[j].type);
+					// update kill count
+					aliens_killed++;
+					// update alien type
 					game.alien_array[j].type = ALIEN_DEAD;
 					// recenter death sprite
 					game.alien_array[j].x -= (alien_death_sprite.width - alien_sprite.width) / 2;
 					// remove rocket
 					game.rockets[i] = game.rockets[game.num_rockets - 1];
-					--game.num_rockets;
+					game.num_rockets--;
 					continue;
 				}
 			}
+
+			// check for hit on player
+			bool overlap = sprite_overlap_check(rocket_sprite, game.rockets[i].x, game.rockets[i].y, playerSprite, game.player.x, game.player.y);
+			if (overlap)
+			{
+				// decrement player lives
+				game.player.lives--;
+
+				// if lose
+				if (game.player.lives == 0)
+				{
+					// print out lose screen 
+					// clear buffer
+					clear_buffer(&buffer, backgroundColor); 
+					glClear(GL_COLOR_BUFFER_BIT);
+
+					// draw lose screen
+					DrawBufferText(&buffer, text_spritesheet, "YOU LOSE", 120, 200, rgb_to_uint32(128, 0, 0));
+
+					// update the texture buffer
+					glTexSubImage2D(
+						GL_TEXTURE_2D, 0, 0, 0,
+						buffer.width, buffer.height,
+						GL_RGBA, GL_UNSIGNED_INT_8_8_8_8,
+						buffer.data
+					);
+
+					// works on the currently bound object
+					glDrawArrays(GL_TRIANGLES, 0, 3);
+
+					// swap buffers
+					glfwSwapBuffers(window);
+
+					Sleep(3000);
+					
+					return 0;
+				}
+
+				// reset player location
+				game.player.x = 150;
+				game.player.y = 25;
+
+			}
+		}
+
+		// check win condition
+		if (aliens_killed == 50)
+		{
+			// print out win screen 
+			// clear buffer
+			clear_buffer(&buffer, backgroundColor);
+			glClear(GL_COLOR_BUFFER_BIT);
+
+			// draw win screen
+			DrawBufferText(&buffer, text_spritesheet, "YOU WIN", 120, 200, rgb_to_uint32(0, 128, 0));
+
+			// update the texture buffer
+			glTexSubImage2D(
+				GL_TEXTURE_2D, 0, 0, 0,
+				buffer.width, buffer.height,
+				GL_RGBA, GL_UNSIGNED_INT_8_8_8_8,
+				buffer.data
+			);
+
+			// works on the currently bound object
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+
+			// swap buffers
+			glfwSwapBuffers(window);
+
+			Sleep(3000);
+
+			return 0;
 		}
 
 
@@ -731,7 +934,59 @@ int main()
 			}
 		}
 
+		// update first line array
+		// iterate through first line array
+		for (int i = 0; i < 10; i++)
+		{
+			// check if each index is an alive alien, if so update to first line
+			if (game.alien_array[i].type != ALIEN_DEAD)
+			{
+				game.first_line_array[i] = game.alien_array[i];
+			}
+			// else if the first alien is dead, jump to the next level and check if its alive
+			else
+			{
+				bool isAlien = false;
+				// iterate through the tiers
+				for (int j = 1; j < 5; j++)
+				{
+					// if the alien is not dead on the next level
+					if (game.alien_array[i + (10 * j)].type != ALIEN_DEAD)
+					{
+						// update it to the first line array
+						game.first_line_array[i] = game.alien_array[i + (10 * j)];
+						isAlien = true;
+						break;
+					}
+				}
+				// if there was no alien updated into the array
+				if (isAlien == false)
+				{
+					// make the last alien the one on the line, handle its death case later
+					game.first_line_array[i] = game.alien_array[i + 40];
+				}
+			}
+		}
+
+		// use first line array to randomly fire rockets from aliens on that first line
+		game.frame_counter++;
+		if (game.frame_counter == 30 && game.num_rockets < GAME_MAX_ROCKETS)
+		{
+			// select random alien on first line
+			int rand = std::rand() % 10;
+
+			// fire rocket from that alien in opposite dir
+			if (game.first_line_array[rand].type != ALIEN_DEAD)
+			{
+				game.rockets[game.num_rockets].x = game.first_line_array[rand].x + 4;
+				game.rockets[game.num_rockets].y = game.first_line_array[rand].y - 10;
+				game.rockets[game.num_rockets].dir = -3;
+				game.num_rockets++;
+			}
 		
+			game.frame_counter = 0;
+		}
+
 
 		// fire rocket if space is pressed
 		if (rocket_fired == true && game.num_rockets < GAME_MAX_ROCKETS)
@@ -739,10 +994,12 @@ int main()
 			game.rockets[game.num_rockets].x = game.player.x + (playerSprite.width / 2);
 			game.rockets[game.num_rockets].y = game.player.y + playerSprite.height;
 			// set rocket direction and speed
-			game.rockets[game.num_rockets].dir = 2;
+			game.rockets[game.num_rockets].dir = 3;
 			game.num_rockets++;
 		}
 		rocket_fired = false;
+
+		//std::cout << "Num Rockets " << game.num_rockets << std::endl;
 
 		// handle poll events
 		glfwPollEvents();
@@ -772,6 +1029,7 @@ int main()
 		delete[] alien_animation[i].frames;
 	}
 	delete[] game.alien_array;
+	delete[] game.first_line_array;
 	
 
 	return 0;
