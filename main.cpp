@@ -320,7 +320,7 @@ int main()
 	const unsigned int buffer_height = 400; // 256
 
 	// create clear color set to green
-	uint32_t backgroundColor = rgb_to_uint32(132, 145, 136);
+	uint32_t backgroundColor = rgb_to_uint32(255, 255, 255);
 	
 	// initialize buffer
 	Buffer buffer;
