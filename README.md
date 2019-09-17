@@ -1,6 +1,8 @@
 # Alien-Invaders
 A recreation of the classic Space Invaders game using C++ and OpenGL for graphics.
 
+![](alienInvadersExample.gif)
+
 ## Learning Outcomes
 1. Become more proficient in C++ and solidify OOP skills learned in CS courses.
 2. Learn how to write shaders and interact with the GPU as opposed to using a game engine or library.
