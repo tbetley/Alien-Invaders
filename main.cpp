@@ -1,7 +1,8 @@
 /**********
-** Tyler Betley
+** Author:		Tyler Betley
 ** Description: Space Invaders type game using OpenGL, GLEW, GLFW APIs.
-** Date:	August 2019
+** Date:		August/September 2019
+** References:	OpenGL Series by The Cherno (Yan Chernikov)
 **********/
 
 #include <cstdio>
@@ -121,14 +122,12 @@ uint32_t rgb_to_uint32(uint8_t r, uint8_t g, uint8_t b)
 void clear_buffer(Buffer* buffer, uint32_t color)
 {
 	// iterate through the entire data set of the buffer (width*height)
-	for (unsigned int i = 0; i < buffer->width * buffer->height; ++i)
+	for (unsigned int i = 0; i < buffer->width * buffer->height; i++)
 	{
 		// assign each data point in the buffer as a specific color
 		buffer->data[i] = color;
 	}
 }
-
-
 
 // sprite struct to hold sprite data
 struct Sprite
@@ -137,15 +136,13 @@ struct Sprite
 	uint8_t* data;
 };
 
-// function to check if sprites are overlapped or register a hit
+// function to check if sprites are overlapped or register a hit: hit if true
 bool sprite_overlap_check(
 	const Sprite& sp_a, unsigned int x_a, unsigned int y_a,
 	const Sprite& sp_b, unsigned int x_b, unsigned int y_b)
 {
-	// NOTE: For simplicity we just check for overlap of the sprite
-	// rectangles. Instead, if the rectangles overlap, we should
-	// further check if any pixel of sprite A overlap with any of
-	// sprite B.
+	// Just check overlap of the sprite rectangles. Instead, if the rectangles overlap, we should
+	// further check if any pixel of sprite A overlap with any of sprite B.
 	if (x_a < x_b + sp_b.width && x_a + sp_a.width > x_b &&
 		y_a < y_b + sp_b.height && y_a + sp_a.height > y_b)
 	{
@@ -155,7 +152,7 @@ bool sprite_overlap_check(
 	return false;
 }
 
-// function to draw sprite, draw only "on" pixels
+// function to draw sprite, draw pixels that are on (have a value of 1)
 void DrawSprite(Buffer* buffer, const Sprite& sprite, unsigned int x, unsigned int y, uint32_t color)
 {
 	for(unsigned int i = 0; i < sprite.width; ++i)
@@ -226,7 +223,6 @@ struct Rocket
 	int dir;
 };
 
-
 // struct to define game parameters and states
 struct Game
 {
@@ -252,6 +248,10 @@ struct SpriteAnimation
 	Sprite** frames;
 };
 
+
+/********
+Main function
+*********/
 int main()
 {
 	// callback functions must be set, and can be done before initialization
@@ -448,6 +448,9 @@ int main()
 	glDisable(GL_DEPTH_TEST);
 	glBindVertexArray(fullscreen_triangle_vao);
 
+	/********
+	Game and Sprite data
+	********/
 	// create alien sprites
 	Sprite alien_sprites[4];
 
@@ -544,7 +547,7 @@ int main()
 		1,1,1,1,1,1,1,1,1,1
 	};
 
-	// create text spritesheet
+	// create text spritesheet, follows ASCII
 	Sprite text_spritesheet;
 	text_spritesheet.width = 5;
 	text_spritesheet.height = 7;
