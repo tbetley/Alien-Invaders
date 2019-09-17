@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29209.62
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Space Invaders", "Space Invaders.vcxproj", "{B6B07DC1-A812-4BDB-B9C0-AE9251BDA8EB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Alien Invaders", "Space Invaders.vcxproj", "{B6B07DC1-A812-4BDB-B9C0-AE9251BDA8EB}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Alien Invaders Installer", "..\Alien Invaders Installer\Alien Invaders Installer.vdproj", "{AC4E3105-8448-4AE0-8B14-E68AF8EB905F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,11 @@ Global
 		{B6B07DC1-A812-4BDB-B9C0-AE9251BDA8EB}.Release|x64.Build.0 = Release|x64
 		{B6B07DC1-A812-4BDB-B9C0-AE9251BDA8EB}.Release|x86.ActiveCfg = Release|Win32
 		{B6B07DC1-A812-4BDB-B9C0-AE9251BDA8EB}.Release|x86.Build.0 = Release|Win32
+		{AC4E3105-8448-4AE0-8B14-E68AF8EB905F}.Debug|x64.ActiveCfg = Debug
+		{AC4E3105-8448-4AE0-8B14-E68AF8EB905F}.Debug|x86.ActiveCfg = Debug
+		{AC4E3105-8448-4AE0-8B14-E68AF8EB905F}.Debug|x86.Build.0 = Debug
+		{AC4E3105-8448-4AE0-8B14-E68AF8EB905F}.Release|x64.ActiveCfg = Release
+		{AC4E3105-8448-4AE0-8B14-E68AF8EB905F}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
